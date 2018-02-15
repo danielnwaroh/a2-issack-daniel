@@ -89,11 +89,13 @@ askFirNum:
 			
 			ldr		r4,	=charBuffer
 			cmp		r0,	#4
-			beq		skip			
-			bl		binError
+			beq		skip		@IF THERE ARE FOUR CHARACTERS THEN SKIP THE FIRST ERROR CHECK STAGE		
+			bl		binError	@BRANCH AND PRINT ERROR MESSAGE
 			b		askFirNum
 			
-skip:		bl		binaryCheck
+skip:		bl		binaryCheck		@CHECK THE INPUT FOR NON-BINARY CHAR
+			cmp		r1,	#0
+			beq		askFirNum		@IF CONTAINED NON-BINARY CHAR THEN ASK FOR INPUT AGAIN
 
 askSecNum:			
 			@Ask for the second input
@@ -109,20 +111,24 @@ askSecNum:
 					
 			ldr		r4,	=charBuffer
 			cmp		r0,	#4
-			beq		skip1			
-			bl		binError
+			beq		skip1			@IF THERE ARE FOUR CHARACTERS THEN SKIP THE FIRST ERROR CHECK STAGE			
+			bl		binError		@BRANCH AND PRINT ERROR MESSAGE
 			b		askSecNum
 			
-skip1:		bl		binaryCheck
+skip1:		bl		binaryCheck		@CHECK THE INPUT FOR NON-BINARY CHAR
+			cmp		r1,	#0
+			beq		askSecNum		@IF CONTAINED NON-BINARY CHAR THEN ASK FOR INPUT AGAIN
 			
 	haltLoop$:  
 			b       haltLoop$
 			
-
+			@check if input contains any non binary numbers
 binaryCheck:
 			push	{r0, r4, r9, fp, lr}
 			mov		fp,	sp
 			sub		sp,	#12
+			
+			mov		r0,	#1
 		
 			ldrb	r0,	[r4, #0]
 			ldrb	r1,	[r4, #1]
@@ -130,33 +136,39 @@ binaryCheck:
 			ldrb	r3,	[r4, #3]
 			
 			cmp		r0,	#48
-			blt		binError
+			blt		done
 			
 			cmp		r0,	#57
-			bgt		binError
+			bgt		done
 			
 			cmp		r1,	#48
-			blt		binError
+			blt		done
 			
 			cmp		r1,	#57
-			bgt		binError
+			bgt		done
 			
 			cmp		r2,	#48
-			blt		binError
+			blt		done
 			
 			cmp		r2,	#57
-			bgt		binError
+			bgt		done
 			
 			cmp		r3,	#48
-			blt		binError
+			blt		done
 			
 			cmp		r3,	#57
-			bgt		binError
+			bgt		done
 			
+			b		good
+			
+done:		bl		binError
+			mov		r1,	#0
+good:
 			add		sp,	#12
 			pop		{r0, r4, r9, fp, pc}
 			@mov		pc,	lr
-			
+		
+		@PRINT OUT THE ERROR MESSAGE WHEN THE NUMBER ENTERED IS NOT ACCEPTABLE
 binError:
 		push	{r0, r4, r9, fp, lr}
 		mov		fp,	sp
