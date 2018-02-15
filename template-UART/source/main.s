@@ -9,7 +9,7 @@ main:
             
             		@Prints out creator names
             ldr     r0, =fmt    	@ String pointer
-            mov     r1, #28        	@ String's length
+            mov     r1, #46        	@ String's length
             bl      WriteStringUART 	@ Write the string to the UART
             b		command
 
@@ -17,10 +17,11 @@ errorMessage:		@print out error message, bad command
 			ldr		r0,	=fmt6		@ String pointer
 			mov		r1,	#25			@ String's length
 			bl		WriteStringUART	@ Write the string to the UART
+			
 
 command:			@Ask for the command to be executed
             ldr     r0, =fmt1    	@ String pointer
-            mov     r1, #25        	@ String's length
+            mov     r1, #26        	@ String's length
             bl      WriteStringUART 	@ Write the string to the UART
 			
 			
@@ -30,47 +31,54 @@ command:			@Ask for the command to be executed
 					@ R0 = number of ASCII characters read.
 					
 			@initializing
-			mov		r6,	#0
-			@mov	r1,	r0
-			ldr		r7,	=charBuffer
+			ldr		r10,	=charBuffer
 			
 			@comparing string lengths		
 			cmp 	r0,	#3
-			beq		loopAND
+			beq		andOp
 			cmp		r0,	#2
-			beq		loopOR
+			beq		orOp
 			b		errorMessage
 			
 			@compare input with the string "AND"		
-loopAND:	ldrb	r8,	=andString
-andTop:				
-			ldrb	r5,	[r7], #1	
-			ldrb	r9,	[r8], #1
-			cmp		r5,	r9
-			bne		errorMessage
+andOp:		
+			mov		r9,	#1
+			ldrb	r5,	[r10, #0]
+			ldrb	r6,	[r10, #1]
+			ldrb	r7,	[r10, #2]
+						
+			cmp	r5,	#65
+			bne	errorMessage
+
+			cmp	r6,	#78
+			bne	errorMessage
+
+			cmp	r7,	#68
+			bne	errorMessage
+
+			b	askFirNum
+
 			
-			add		r6,	r6,	#1
-			cmp		r6,	#3
-			blt		andTop
-			b		done		
-			
+
 			@compare input with the string "OR"
-loopOR:		ldrb	r8,	=orString
-orTop:		
-			ldrb	r5,	[r7], #1
-			ldrb	r9,	[r8], #1
-			cmp		r5,	r9
-			bne		errorMessage
+orOp:		
+			mov		r9,	#2
 			
-			add		r6,	r6,	#1
-			cmp		r6,	#2
-			blt		orTop
-			b		done
+			ldrb	r5,	[r10, #0]
+			ldrb	r6,	[r10, #1]
+
+			cmp	r5,	#79
+			bne	errorMessage
+		
+			cmp	r6,	#82
+			bne	errorMessage
+
+			b		askFirNum
 			
-done:		
+askFirNum:		
 			@Ask for the first input
             ldr     r0, =fmt2    	@ String pointer
-            mov     r1, #39        	@ String's length
+            mov     r1, #40        	@ String's length
             bl      WriteStringUART 	@ Write the string to the UART
 
 
@@ -78,10 +86,19 @@ done:
             mov     r1, #64    		@ buffer size
             bl      ReadLineUART 	@ Read from the UART until a new line is encountered. 
 					@ R0 = number of ASCII characters read.
-					
+			
+			ldr		r4,	=charBuffer
+			cmp		r0,	#4
+			beq		skip			
+			bl		binError
+			b		askFirNum
+			
+skip:		bl		binaryCheck
+
+askSecNum:			
 			@Ask for the second input
             ldr     r0, =fmt3    	@ String pointer
-            mov     r1, #40        	@ String's length
+            mov     r1, #41        	@ String's length
             bl      WriteStringUART 	@ Write the string to the UART
 
 
@@ -90,26 +107,85 @@ done:
             bl      ReadLineUART 	@ Read from the UART until a new line is encountered. 
 					@ R0 = number of ASCII characters read
 					
-
+			ldr		r4,	=charBuffer
+			cmp		r0,	#4
+			beq		skip1			
+			bl		binError
+			b		askSecNum
+			
+skip1:		bl		binaryCheck
+			
 	haltLoop$:  
 			b       haltLoop$
+			
+
+binaryCheck:
+			push	{r0, r4, r9, fp, lr}
+			mov		fp,	sp
+			sub		sp,	#12
+		
+			ldrb	r0,	[r4, #0]
+			ldrb	r1,	[r4, #1]
+			ldrb	r2,	[r4, #2]
+			ldrb	r3,	[r4, #3]
+			
+			cmp		r0,	#48
+			blt		binError
+			
+			cmp		r0,	#57
+			bgt		binError
+			
+			cmp		r1,	#48
+			blt		binError
+			
+			cmp		r1,	#57
+			bgt		binError
+			
+			cmp		r2,	#48
+			blt		binError
+			
+			cmp		r2,	#57
+			bgt		binError
+			
+			cmp		r3,	#48
+			blt		binError
+			
+			cmp		r3,	#57
+			bgt		binError
+			
+			add		sp,	#12
+			pop		{r0, r4, r9, fp, pc}
+			@mov		pc,	lr
+			
+binError:
+		push	{r0, r4, r9, fp, lr}
+		mov		fp,	sp
+		
+			@print out error message, bad number
+		ldr		r0,	=fmt4		@ String pointer
+		mov		r1,	#22			@ String's length
+		bl		WriteStringUART	@ Write the string to the UART
+		
+		pop		{r0, r4, r9, fp, pc}
+		@mov		pc,	lr
+
 
 @ Data section
 .section    .data
 
 @input prints
 fmt1:
-.ascii		"Please enter a command:\r\n"
+.ascii		"Please enter a command:\r\n>"
 fmt2:
-.ascii		"Please enter the first binary number:\r\n"
+.ascii		"Please enter the first binary number:\r\n>"
 fmt3:
-.ascii		"Please enter the second binary number:\r\n"
+.ascii		"Please enter the second binary number:\r\n>"
 
 @prints
 fmt:
-.ascii		"Creator names: Issack John\r\n"
+.ascii		"Creator names: Issack John and Daniel Nwaroh\r\n"
 fmt4:
-.ascii		"wrong number format!\r\n"
+.ascii		"Wrong number format!\r\n"
 fmt5:
 .ascii		"The result is: %d\r\n"
 fmt6:
