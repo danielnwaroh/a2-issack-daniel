@@ -1,0 +1,166 @@
+
+performAnd1:
+		push	{r4, r8, fp, lr}
+		mov		fp,	sp
+		sub		sp,	#12
+		mov		r0,	#1
+		
+		ldrb	r0,	[r4, r5]	@Second input
+		ldrb	r1,	[r8, r5]	@First input
+		
+		cmp		r0,	#0
+		@beq
+		
+shift:	lsl		r0,	#1
+add:
+		
+
+		
+		@cmp		r1,	r0												@ Can be removed
+		@bne		haltLoop$
+		
+		sub		r0,	r0,	#48												@ Converts ascii to binary
+		sub		r1,	r1,	#48												@ Converts ascii to binary
+		
+		add		r5,	r5,	#1
+		
+		and		r3,	r1,	r0
+		cmp		r3,	#1
+		beq		printOne
+		
+		and		r3,	r1,	r0
+		cmp		r3,	#0
+		beq		printZero
+
+		cmp		r5,	#4
+		bge		haltLoop$
+		
+		@add		r5,	r5,	#1											@ Can be removed
+		@b		performAnd1		
+			
+		@ldr     r0, =fmt7    	@ String pointer						@ Can be removed
+		@mov     r1, #11        	@ String's length
+		@bl      WriteStringUART 	@ Write the string to the UART
+		
+		b		haltLoop$
+		
+		add		sp,	#12
+		pop		{r4, r8, fp, pc}
+
+@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+
+performOr:
+		push	{r4, r8, fp, lr}
+		mov		fp,	sp
+		sub		sp,	#12
+		mov		r0,	#1
+		
+		ldrb	r0,	[r4, r5]	@Second input
+		ldrb	r1,	[r8, r5]	@First input
+		
+		@cmp		r1,	r0												@ Can be removed
+		@bne		haltLoop$
+		
+		sub		r0,	r0,	#48												@ Converts ascii to binary
+		sub		r1,	r1,	#48												@ Converts ascii to binary
+		
+		add		r5,	r5,	#1
+		
+		orr		r3,	r1,	r0
+		cmp		r3,	#1
+		beq		printOne
+		
+		and		r3,	r1,	r0
+		cmp		r3,	#0
+		beq		printZero
+
+		cmp		r5,	#4
+		bge		haltLoop$
+		
+		@add		r5,	r5,	#1											@ Can be removed
+		@b		performAnd1		
+			
+		@ldr     r0, =fmt7    	@ String pointer						@ Can be removed
+		@mov     r1, #11        	@ String's length
+		@bl      WriteStringUART 	@ Write the string to the UART
+		
+		b		haltLoop$
+		
+		add		sp,	#12
+		pop		{r4, r8, fp, pc}
+@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+		
+printOne:
+		ldr		r0,	=numOne
+		mov		r1,	#1
+		bl		WriteStringUART
+		
+		cmp		r9,	#1
+		bgt		performOr
+		b		performAnd1
+		
+		@bl		performAnd1
+@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@	
+printZero:
+		ldr		r0,	=numZero
+		mov		r1,	#1
+		bl		WriteStringUART
+		
+		cmp		r9,	#1
+		bgt		performOr
+		b		performAnd1
+		
+		@bl		performAnd1
+@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+		
+printResult:
+		ldr		r0,	=theResult
+		mov		r1,	#15
+		bl		WriteStringUART
+		
+		cmp		r9,	#1
+		bgt		performOr
+		@b		performAnd1
+		@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+		
+convertA2B:
+		push	{r0, r1, fp, lr}
+		mov		fp,	sp
+		
+		sub		sp,	#8
+		
+		mov		r2,	#0
+		
+		mov		r5,	#0
+		mov		r6,	#0
+		
+convertTop:
+		ldrb	r8,	[r0, r2]	@First input
+		ldrb	r4,	[r1, r2]	@Second input
+		
+		sub		r8,	r8,	#48												@ Converts ascii to binary
+		sub		r4,	r4,	#48												@ Converts ascii to binary
+		
+		lsl		r5,	r5, #1
+		lsl		r6,	r6, #1
+			
+		cmp		r8,	#1
+		bne		next
+		add		r5,	r5,	#1		
+
+next:		
+		cmp		r4,	#1
+		bne		next2
+		add		r6,	r6,	#1
+next2:	
+		
+		add		r2,	r2,	#1
+		cmp		r2,	#4
+		blt		convertTop
+				
+		mov		r0,	r5
+		mov		r1,	r6
+		
+		add		sp,	#8
+		pop		{r0, r1, fp, pc}
+		mov		pc,	lr
