@@ -3,13 +3,13 @@
 .section    .text
 
 .global main
+
 main: 
-      
             bl      InitUART        	@ Initialize the UART
-            
+                  
             		@Prints out creator names
             ldr     r0, =fmt    	@ String pointer
-            mov     r1, #46        	@ String's length
+            mov     r1, #48        	@ String's length
             bl      WriteStringUART 	@ Write the string to the UART
             b		command
 
@@ -21,9 +21,8 @@ errorMessage:		@print out error message, bad command
 
 command:			@Ask for the command to be executed
             ldr     r0, =fmt1    	@ String pointer
-            mov     r1, #26        	@ String's length
+            mov     r1, #28        	@ String's length
             bl      WriteStringUART 	@ Write the string to the UART
-			
 			
             ldr     r0, =charBuffer @ buffer address
             mov		r1,	#64			@ buffer size
@@ -58,8 +57,6 @@ andOp:
 
 			b	askFirNum
 
-			
-
 			@compare input with the string "OR"
 orOp:		
 			mov		r9,	#2
@@ -82,12 +79,12 @@ askFirNum:
             bl      WriteStringUART 	@ Write the string to the UART
 
 
-            ldr     r0, =charBuffer 		@ buffer address
+            ldr     r0, =charBuffer2 		@ buffer address
             mov     r1, #64    		@ buffer size
             bl      ReadLineUART 	@ Read from the UART until a new line is encountered. 
 					@ R0 = number of ASCII characters read.
 			
-			ldr		r4,	=charBuffer
+			ldr		r4,	=charBuffer2
 			cmp		r0,	#4
 			beq		skip		@IF THERE ARE FOUR CHARACTERS THEN SKIP THE FIRST ERROR CHECK STAGE		
 			bl		binError	@BRANCH AND PRINT ERROR MESSAGE
@@ -96,13 +93,14 @@ askFirNum:
 skip:		bl		binaryCheck		@CHECK THE INPUT FOR NON-BINARY CHAR
 			cmp		r1,	#0
 			beq		askFirNum		@IF CONTAINED NON-BINARY CHAR THEN ASK FOR INPUT AGAIN
+			
+			ldr		r8,	=charBuffer2	@NEW SPOT FOR THE FIRST INPUT, SO THAT WE CAN GET IT AGAIN FOR LATER USE
 
 askSecNum:			
 			@Ask for the second input
             ldr     r0, =fmt3    	@ String pointer
             mov     r1, #41        	@ String's length
             bl      WriteStringUART 	@ Write the string to the UART
-
 
             ldr     r0, =charBuffer     @ buffer address
             mov     r1, #64    		@ buffer size
@@ -119,14 +117,126 @@ skip1:		bl		binaryCheck		@CHECK THE INPUT FOR NON-BINARY CHAR
 			cmp		r1,	#0
 			beq		askSecNum		@IF CONTAINED NON-BINARY CHAR THEN ASK FOR INPUT AGAIN
 			
+			mov		r5,	#0
+			
+			mov		r0,	r8			@First num
+			mov		r1,	r4			@Second num
+			
+			@bl		convertA2B
+			mov		r2,	#0
+		
+			mov		r5,	#0
+			mov		r6,	#0
+			
+convertTop:
+			ldrb	r8,	[r0, r2]	@First input
+			ldrb	r4,	[r1, r2]	@Second input
+			
+			sub		r8,	r8,	#48												@ Converts ascii to binary
+			sub		r4,	r4,	#48												@ Converts ascii to binary
+			
+			lsl		r5,	r5, #1
+			lsl		r6,	r6, #1
+				
+			cmp		r8,	#1
+			bne		next
+			add		r5,	r5,	#1		
+
+	next:		
+			cmp		r4,	#1
+			bne		next2
+			add		r6,	r6,	#1
+	next2:	
+			
+			add		r2,	r2,	#1
+			cmp		r2,	#4
+			blt		convertTop
+					
+			mov		r0,	r5
+			mov		r1,	r6
+			
+			mov		r8,	r0
+			mov		r4,	r1
+			@and		r5,	r8,	r4
+			
+			cmp		r9,	#1
+			bgt		doOr
+			
+			@mov		r6,	r5
+			@mov		r9,	#0
+			@ldr		r3,	=result
+			
+doAnd:
+			and		r5,	r8,	r4
+			b		next3
+
+doOr:
+			orr		r5,	r8,	r4
+			b		next3
+	
+next3:		
+			mov		r6,	r5
+			mov		r9,	#0
+			ldr		r3,	=result
+			
+convertLoop:
+			and 	r7,	r6, #1
+			cmp		r7,	#1
+			beq		add1
+				
+add0:		mov		r4,	#48
+			str		r4, [r3, r9]
+			b		overAdd1
+			
+add1:		mov		r4,	#49
+			str		r4, [r3, r9]
+overAdd1:
+			asr		r6,	r6,	#1
+			add		r9,	r9,	#1
+			cmp		r9,	#4
+			blt		convertLoop
+			
+			mov		r7,	#0
+			
+			ldr		r6, =finalResult
+			
+			ldr		r7,	[r3, #4]
+			str		r7, [r6, #0]
+			
+			ldr		r7,	[r3, #3]
+			str		r7, [r6, #1]
+			
+			ldr		r7,	[r3, #2]
+			str		r7, [r6, #2]
+			
+			ldr		r7,	[r3, #1]
+			str		r7, [r6, #3]
+			
+			ldr		r0,	=fmt5		@ String pointer
+			mov		r1,	#15			@ String's length
+			bl		WriteStringUART	@ Write the string to the UART
+
+			ldr		r0,	=finalResult
+			mov		r1,	#5
+			bl		WriteStringUART
+				
+			b		command
+			
 	haltLoop$:  
 			b       haltLoop$
 			
+			
+
+
+			
+@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+			
 			@check if input contains any non binary numbers
 binaryCheck:
-			push	{r0, r4, r9, fp, lr}
+			push	{r4, fp, lr}
+
 			mov		fp,	sp
-			sub		sp,	#12
+			sub		sp,	#16
 			
 			mov		r0,	#1
 		
@@ -138,25 +248,25 @@ binaryCheck:
 			cmp		r0,	#48
 			blt		done
 			
-			cmp		r0,	#57
+			cmp		r0,	#49
 			bgt		done
 			
 			cmp		r1,	#48
 			blt		done
 			
-			cmp		r1,	#57
+			cmp		r1,	#49
 			bgt		done
 			
 			cmp		r2,	#48
 			blt		done
 			
-			cmp		r2,	#57
+			cmp		r2,	#49
 			bgt		done
 			
 			cmp		r3,	#48
 			blt		done
 			
-			cmp		r3,	#57
+			cmp		r3,	#49
 			bgt		done
 			
 			b		good
@@ -164,30 +274,36 @@ binaryCheck:
 done:		bl		binError
 			mov		r1,	#0
 good:
-			add		sp,	#12
-			pop		{r0, r4, r9, fp, pc}
-			@mov		pc,	lr
+			add		sp,	#16
+			pop		{r4, fp, pc}
+			mov 	pc, lr
+			
+@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 		
 		@PRINT OUT THE ERROR MESSAGE WHEN THE NUMBER ENTERED IS NOT ACCEPTABLE
 binError:
-		push	{r0, r4, r9, fp, lr}
+		push	{fp, lr}
+
 		mov		fp,	sp
+		sub		sp,	#8
 		
 			@print out error message, bad number
 		ldr		r0,	=fmt4		@ String pointer
 		mov		r1,	#22			@ String's length
 		bl		WriteStringUART	@ Write the string to the UART
 		
-		pop		{r0, r4, r9, fp, pc}
-		@mov		pc,	lr
-
+		add		sp,	#8
+		
+		pop		{fp, pc}
+		mov		pc,	lr
+@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@	
 
 @ Data section
 .section    .data
 
 @input prints
 fmt1:
-.ascii		"Please enter a command:\r\n>"
+.ascii		"\r\nPlease enter a command:\r\n>"
 fmt2:
 .ascii		"Please enter the first binary number:\r\n>"
 fmt3:
@@ -195,13 +311,26 @@ fmt3:
 
 @prints
 fmt:
-.ascii		"Creator names: Issack John and Daniel Nwaroh\r\n"
+.ascii		"\r\nCreator names: Issack John and Daniel Nwaroh\r\n"
 fmt4:
 .ascii		"Wrong number format!\r\n"
 fmt5:
-.ascii		"The result is: %d\r\n"
+.ascii		"The result is: "
 fmt6:
 .ascii		"Command not recognized!\r\n"
+
+result:
+.rept		64
+.byte		0
+.endr
+
+finalResult:
+.rept		64
+.byte		0
+.endr
+
+
+
 
 @error checking
 andString:
@@ -214,3 +343,13 @@ charBuffer:
 .rept		64
 .byte		0
 .endr
+
+charBuffer2:
+.rept		64
+.byte		0
+.endr
+
+charBuffer3:
+.rept		64
+.byte		0
+.endr		
