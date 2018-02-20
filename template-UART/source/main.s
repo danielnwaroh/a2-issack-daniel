@@ -122,7 +122,6 @@ skip1:		bl		binaryCheck		@CHECK THE INPUT FOR NON-BINARY CHAR
 			mov		r0,	r8			@First num
 			mov		r1,	r4			@Second num
 			
-			@bl		convertA2B
 			mov		r2,	#0
 		
 			mov		r5,	#0
@@ -196,21 +195,22 @@ overAdd1:
 			cmp		r9,	#32
 			blt		convertLoop
 			
+reverseLoop:
+			
 			mov		r7,	#0
-			
 			ldr		r6, =finalResult
+			mov		r5,	#31
+			mov		r8,	#0
 			
-			ldr		r7,	[r3, #4]
-			str		r7, [r6, #0]
+reverseTop:
+
+			ldr		r7,	[r3, r5]
+			str		r7, [r6, r8]
 			
-			ldr		r7,	[r3, #3]
-			str		r7, [r6, #1]
-			
-			ldr		r7,	[r3, #2]
-			str		r7, [r6, #2]
-			
-			ldr		r7,	[r3, #1]
-			str		r7, [r6, #3]
+			add		r8,	r8,	#1
+			sub		r5,	r5,	#1
+			cmp		r5,	#0
+			bge		reverseTop
 			
 			ldr		r0,	=fmt5		@ String pointer
 			mov		r1,	#15			@ String's length
@@ -233,29 +233,16 @@ overAdd1:
 			
 			@check if input contains any non binary numbers
 binaryCheck:
-			push	{r4, fp, lr}
+			push	{r4, r5, fp, lr}
 
 			mov		fp,	sp
 			sub		sp,	#16
 			
-			mov		r0,	#1
-		
-			ldrb	r0,	[r4, #0]
-			ldrb	r1,	[r4, #1]
-			ldrb	r2,	[r4, #2]
-			ldrb	r3,	[r4, #3]
+			mov		r5, #0
+			mov		r1, #1
 			
-			cmp		r0,	#48
-			blt		done
-			
-			cmp		r0,	#49
-			bgt		done
-			
-			cmp		r1,	#48
-			blt		done
-			
-			cmp		r1,	#49
-			bgt		done
+BCTop:
+			ldrb	r2,	[r4, r5]
 			
 			cmp		r2,	#48
 			blt		done
@@ -263,11 +250,9 @@ binaryCheck:
 			cmp		r2,	#49
 			bgt		done
 			
-			cmp		r3,	#48
-			blt		done
-			
-			cmp		r3,	#49
-			bgt		done
+			add		r5,	r5,	#1
+			cmp		r5,	r0
+			blt		BCTop
 			
 			b		good
 			
@@ -275,7 +260,7 @@ done:		bl		binError
 			mov		r1,	#0
 good:
 			add		sp,	#16
-			pop		{r4, fp, pc}
+			pop		{r4, r5, fp, pc}
 			mov 	pc, lr
 			
 @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
